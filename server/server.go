@@ -9,6 +9,7 @@ import (
 
 	"github.com/mycroft/sec-skills-mcp/tools/dns"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
+	"github.com/mycroft/sec-skills-mcp/tools/whois"
 )
 
 // New creates and returns a configured MCP server with all security tools registered.
@@ -38,6 +39,14 @@ func New() *server.MCPServer {
 		),
 	), dnsHandler)
 
+	s.AddTool(mcp.NewTool("whois_lookup",
+		mcp.WithDescription("Query WHOIS data for a domain or IP address to gather registrant info, creation dates, and ASN details. Useful for recon. Only use against targets you are authorized to investigate."),
+		mcp.WithString("target",
+			mcp.Required(),
+			mcp.Description("Domain name or IP address to query (e.g. 'example.com' or '8.8.8.8')"),
+		),
+	), whoisHandler)
+
 	return s
 }
 
@@ -52,6 +61,19 @@ func nmapHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolRes
 	result, err := nmap.Scan(target, ports)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("nmap scan failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
+}
+
+func whoisHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	target, ok := req.Params.Arguments["target"].(string)
+	if !ok || target == "" {
+		return mcp.NewToolResultError("target parameter is required"), nil
+	}
+
+	result, err := whois.Lookup(target)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("whois lookup failed: %v", err)), nil
 	}
 	return mcp.NewToolResultText(result), nil
 }

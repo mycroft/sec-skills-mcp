@@ -8,6 +8,7 @@ An MCP (Model Context Protocol) server written in Go that provides security tool
 
 - Go 1.22 or later
 - `nmap` installed and available in `PATH` (for the `nmap_scan` tool)
+- `whois` installed and available in `PATH` (for the `whois_lookup` tool)
 
 ## Installation
 
@@ -61,6 +62,16 @@ Perform DNS lookups for a domain, returning A, AAAA, MX, NS, and TXT records.
 | `domain`  | Yes      | Domain name to query (e.g. `example.com`) |
 
 **Example prompt**: "Look up DNS records for example.com"
+
+### `whois_lookup`
+
+Query WHOIS data for a domain or IP address to gather registrant info, creation dates, and ASN details.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `target`  | Yes      | Domain name or IP address to query (e.g. `example.com` or `8.8.8.8`) |
+
+**Example prompt**: "Get WHOIS information for example.com"
 
 ## Development
 
