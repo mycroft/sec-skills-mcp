@@ -11,6 +11,7 @@ import (
 	http_probe "github.com/mycroft/sec-skills-mcp/tools/http_probe"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
 	ssl_inspect "github.com/mycroft/sec-skills-mcp/tools/ssl_inspect"
+	subdomain_enum "github.com/mycroft/sec-skills-mcp/tools/subdomain_enum"
 	"github.com/mycroft/sec-skills-mcp/tools/whois"
 )
 
@@ -74,6 +75,20 @@ func New() *server.MCPServer {
 		),
 	), httpProbeHandler)
 
+	s.AddTool(mcp.NewTool("subdomain_enum",
+		mcp.WithDescription("Enumerate subdomains for a domain using certificate transparency logs (crt.sh) or wordlist brute-forcing (gobuster/ffuf). Only use against domains you are authorized to test."),
+		mcp.WithString("domain",
+			mcp.Required(),
+			mcp.Description("Target domain to enumerate subdomains for (e.g. 'example.com')"),
+		),
+		mcp.WithString("method",
+			mcp.Description("Enumeration method: 'crtsh' (certificate transparency logs, default), 'gobuster' (DNS brute-force), or 'ffuf' (HTTP brute-force)"),
+		),
+		mcp.WithString("wordlist",
+			mcp.Description("Path to wordlist file (required for gobuster and ffuf methods)"),
+		),
+	), subdomainEnumHandler)
+
 	return s
 }
 
@@ -129,6 +144,27 @@ func dnsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	result, err := dns.Lookup(domain)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("DNS lookup failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
+}
+
+func subdomainEnumHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	domain, ok := req.Params.Arguments["domain"].(string)
+	if !ok || domain == "" {
+		return mcp.NewToolResultError("domain parameter is required"), nil
+	}
+
+	method, _ := req.Params.Arguments["method"].(string)
+	wordlist, _ := req.Params.Arguments["wordlist"].(string)
+
+	opts := subdomain_enum.EnumOptions{
+		Method:   method,
+		Wordlist: wordlist,
+	}
+
+	result, err := subdomain_enum.Enumerate(domain, opts)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("subdomain enumeration failed: %v", err)), nil
 	}
 	return mcp.NewToolResultText(result), nil
 }
