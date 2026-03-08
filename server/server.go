@@ -10,6 +10,7 @@ import (
 	"github.com/mycroft/sec-skills-mcp/tools/dns"
 	http_probe "github.com/mycroft/sec-skills-mcp/tools/http_probe"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
+	ssl_inspect "github.com/mycroft/sec-skills-mcp/tools/ssl_inspect"
 	"github.com/mycroft/sec-skills-mcp/tools/whois"
 )
 
@@ -48,6 +49,17 @@ func New() *server.MCPServer {
 		),
 	), whoisHandler)
 
+	s.AddTool(mcp.NewTool("ssl_inspect",
+		mcp.WithDescription("Analyze TLS/SSL certificates and configuration for a host: check certificate expiry, issuer chain, Subject Alternative Names (SANs), weak cipher suites, and supported protocol versions including TLS 1.0/1.1 detection. Only use against hosts you are authorized to test."),
+		mcp.WithString("host",
+			mcp.Required(),
+			mcp.Description("Hostname to inspect (e.g. 'example.com')"),
+		),
+		mcp.WithString("port",
+			mcp.Description("TCP port to connect to (default: 443)"),
+		),
+	), sslInspectHandler)
+
 	s.AddTool(mcp.NewTool("http_probe",
 		mcp.WithDescription("Probe an HTTP/HTTPS target to fingerprint web servers: detect technologies via response headers and cookies, record status codes, and optionally check common paths for sensitive resources. Only use against targets you are authorized to test."),
 		mcp.WithString("target",
@@ -63,6 +75,21 @@ func New() *server.MCPServer {
 	), httpProbeHandler)
 
 	return s
+}
+
+func sslInspectHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	host, ok := req.Params.Arguments["host"].(string)
+	if !ok || host == "" {
+		return mcp.NewToolResultError("host parameter is required"), nil
+	}
+
+	port, _ := req.Params.Arguments["port"].(string)
+
+	result, err := ssl_inspect.Inspect(host, port)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("SSL inspection failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
 }
 
 func nmapHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -85,6 +85,17 @@ Probe an HTTP/HTTPS URL to fingerprint web servers: detect technologies via resp
 
 **Example prompt**: "Probe https://example.com and check common paths for sensitive files"
 
+### `ssl_inspect`
+
+Analyze TLS/SSL certificates and configuration for a host: check certificate expiry, issuer chain, Subject Alternative Names (SANs), weak cipher suites, and supported protocol versions (TLS 1.0/1.1 detection).
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `host`    | Yes      | Hostname to inspect (e.g. `example.com`) |
+| `port`    | No       | TCP port to connect to (default: `443`) |
+
+**Example prompt**: "Inspect the TLS configuration of example.com"
+
 ## Development
 
 ```bash
