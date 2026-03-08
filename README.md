@@ -73,6 +73,18 @@ Query WHOIS data for a domain or IP address to gather registrant info, creation 
 
 **Example prompt**: "Get WHOIS information for example.com"
 
+### `http_probe`
+
+Probe an HTTP/HTTPS URL to fingerprint web servers: detect technologies via response headers and cookies, record status codes and headers, and optionally check common paths for sensitive resources.
+
+| Parameter        | Required | Description |
+|-----------------|----------|-------------|
+| `target`         | Yes      | Full URL to probe (e.g. `https://example.com`) |
+| `check_paths`    | No       | When `true`, probe common paths such as `/robots.txt`, `/.git/HEAD`, `/admin`, `/.env`, etc. |
+| `skip_tls_verify`| No       | When `true`, skip TLS certificate verification (useful for self-signed certificates). |
+
+**Example prompt**: "Probe https://example.com and check common paths for sensitive files"
+
 ## Development
 
 ```bash

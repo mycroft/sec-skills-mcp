@@ -8,6 +8,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 
 	"github.com/mycroft/sec-skills-mcp/tools/dns"
+	http_probe "github.com/mycroft/sec-skills-mcp/tools/http_probe"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
 	"github.com/mycroft/sec-skills-mcp/tools/whois"
 )
@@ -46,6 +47,20 @@ func New() *server.MCPServer {
 			mcp.Description("Domain name or IP address to query (e.g. 'example.com' or '8.8.8.8')"),
 		),
 	), whoisHandler)
+
+	s.AddTool(mcp.NewTool("http_probe",
+		mcp.WithDescription("Probe an HTTP/HTTPS target to fingerprint web servers: detect technologies via response headers and cookies, record status codes, and optionally check common paths for sensitive resources. Only use against targets you are authorized to test."),
+		mcp.WithString("target",
+			mcp.Required(),
+			mcp.Description("Full URL to probe (e.g. 'https://example.com')"),
+		),
+		mcp.WithBoolean("check_paths",
+			mcp.Description("When true, probe common paths such as /robots.txt, /.git/HEAD, /admin, /.env, etc. Defaults to false."),
+		),
+		mcp.WithBoolean("skip_tls_verify",
+			mcp.Description("When true, skip TLS certificate verification (useful for self-signed certs). Defaults to false."),
+		),
+	), httpProbeHandler)
 
 	return s
 }
@@ -87,6 +102,27 @@ func dnsHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResu
 	result, err := dns.Lookup(domain)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("DNS lookup failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
+}
+
+func httpProbeHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	target, ok := req.Params.Arguments["target"].(string)
+	if !ok || target == "" {
+		return mcp.NewToolResultError("target parameter is required"), nil
+	}
+
+	checkPaths, _ := req.Params.Arguments["check_paths"].(bool)
+	skipTLS, _ := req.Params.Arguments["skip_tls_verify"].(bool)
+
+	opts := http_probe.ProbeOptions{
+		CheckPaths:    checkPaths,
+		SkipTLSVerify: skipTLS,
+	}
+
+	result, err := http_probe.Probe(target, opts)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("HTTP probe failed: %v", err)), nil
 	}
 	return mcp.NewToolResultText(result), nil
 }
