@@ -9,6 +9,8 @@ An MCP (Model Context Protocol) server written in Go that provides security tool
 - Go 1.22 or later
 - `nmap` installed and available in `PATH` (for the `nmap_scan` tool)
 - `whois` installed and available in `PATH` (for the `whois_lookup` tool)
+- `gobuster` installed and available in `PATH` (optional, for the `subdomain_enum` tool with `gobuster` method)
+- `ffuf` installed and available in `PATH` (optional, for the `subdomain_enum` tool with `ffuf` method)
 
 ## Installation
 
@@ -95,6 +97,25 @@ Analyze TLS/SSL certificates and configuration for a host: check certificate exp
 | `port`    | No       | TCP port to connect to (default: `443`) |
 
 **Example prompt**: "Inspect the TLS configuration of example.com"
+
+### `subdomain_enum`
+
+Enumerate subdomains for a domain using certificate transparency logs or wordlist brute-forcing.
+
+| Parameter  | Required | Description |
+|------------|----------|-------------|
+| `domain`   | Yes      | Target domain to enumerate subdomains for (e.g. `example.com`) |
+| `method`   | No       | Enumeration method: `crtsh` (default), `gobuster`, or `ffuf` |
+| `wordlist` | No       | Path to wordlist file (required for `gobuster` and `ffuf` methods) |
+
+**Methods:**
+- `crtsh` (default): Queries the [crt.sh](https://crt.sh) certificate transparency log API — no external tools required.
+- `gobuster`: Brute-forces DNS subdomains using `gobuster dns`. Requires `gobuster` in `PATH` and a wordlist.
+- `ffuf`: Brute-forces subdomains via HTTP using `ffuf`. Requires `ffuf` in `PATH` and a wordlist.
+
+**Example prompts**:
+- "Find subdomains of example.com using certificate transparency logs"
+- "Brute-force subdomains of example.com with gobuster using /usr/share/wordlists/subdomains.txt"
 
 ## Development
 
