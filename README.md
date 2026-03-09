@@ -98,6 +98,20 @@ Analyze TLS/SSL certificates and configuration for a host: check certificate exp
 
 **Example prompt**: "Inspect the TLS configuration of example.com"
 
+### `port_service_banner`
+
+Connect to open TCP ports and grab service banners to identify running software and versions. This is faster than `nmap -sV` for targeted banner collection on already-identified open ports.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `target`  | Yes      | Target IP address or hostname |
+| `ports`   | Yes      | Ports to probe: single port (`22`), comma-separated (`22,80,443`), or range (`8000-8010`). Maximum 256 ports per call. |
+| `timeout` | No       | Connection and read timeout in seconds (default: `5`) |
+
+**Example prompts**:
+- "Grab service banners from ports 22, 80, and 443 on 192.168.1.1"
+- "Identify what's running on ports 8000-8010 on 10.0.0.1"
+
 ### `subdomain_enum`
 
 Enumerate subdomains for a domain using certificate transparency logs or wordlist brute-forcing.

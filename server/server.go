@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -10,6 +11,7 @@ import (
 	"github.com/mycroft/sec-skills-mcp/tools/dns"
 	http_probe "github.com/mycroft/sec-skills-mcp/tools/http_probe"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
+	port_service_banner "github.com/mycroft/sec-skills-mcp/tools/port_service_banner"
 	ssl_inspect "github.com/mycroft/sec-skills-mcp/tools/ssl_inspect"
 	subdomain_enum "github.com/mycroft/sec-skills-mcp/tools/subdomain_enum"
 	"github.com/mycroft/sec-skills-mcp/tools/whois"
@@ -74,6 +76,21 @@ func New() *server.MCPServer {
 			mcp.Description("When true, skip TLS certificate verification (useful for self-signed certs). Defaults to false."),
 		),
 	), httpProbeHandler)
+
+	s.AddTool(mcp.NewTool("port_service_banner",
+		mcp.WithDescription("Connect to open TCP ports and grab service banners to identify running software and versions. Faster than nmap -sV for targeted banner collection. Only use against hosts you are authorized to test."),
+		mcp.WithString("target",
+			mcp.Required(),
+			mcp.Description("Target IP address or hostname"),
+		),
+		mcp.WithString("ports",
+			mcp.Required(),
+			mcp.Description("Ports to probe: single port ('22'), comma-separated ('22,80,443'), or range ('8000-8010'). Maximum 256 ports per call."),
+		),
+		mcp.WithString("timeout",
+			mcp.Description("Connection and read timeout in seconds (default: 5)"),
+		),
+	), portServiceBannerHandler)
 
 	s.AddTool(mcp.NewTool("subdomain_enum",
 		mcp.WithDescription("Enumerate subdomains for a domain using certificate transparency logs (crt.sh) or wordlist brute-forcing (gobuster/ffuf). Only use against domains you are authorized to test."),
@@ -186,6 +203,31 @@ func httpProbeHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallTo
 	result, err := http_probe.Probe(target, opts)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("HTTP probe failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
+}
+
+func portServiceBannerHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	target, ok := req.Params.Arguments["target"].(string)
+	if !ok || target == "" {
+		return mcp.NewToolResultError("target parameter is required"), nil
+	}
+
+	ports, ok := req.Params.Arguments["ports"].(string)
+	if !ok || ports == "" {
+		return mcp.NewToolResultError("ports parameter is required"), nil
+	}
+
+	var timeoutSecs int
+	if t, ok := req.Params.Arguments["timeout"].(string); ok && t != "" {
+		if n, err := strconv.Atoi(t); err == nil && n > 0 {
+			timeoutSecs = n
+		}
+	}
+
+	result, err := port_service_banner.GrabBanners(target, ports, timeoutSecs)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("banner grab failed: %v", err)), nil
 	}
 	return mcp.NewToolResultText(result), nil
 }
