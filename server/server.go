@@ -10,6 +10,7 @@ import (
 
 	"github.com/mycroft/sec-skills-mcp/tools/dns"
 	http_probe "github.com/mycroft/sec-skills-mcp/tools/http_probe"
+	jwt_analyzer "github.com/mycroft/sec-skills-mcp/tools/jwt_analyzer"
 	"github.com/mycroft/sec-skills-mcp/tools/nmap"
 	port_service_banner "github.com/mycroft/sec-skills-mcp/tools/port_service_banner"
 	ssl_inspect "github.com/mycroft/sec-skills-mcp/tools/ssl_inspect"
@@ -92,6 +93,14 @@ func New() *server.MCPServer {
 		),
 	), portServiceBannerHandler)
 
+	s.AddTool(mcp.NewTool("jwt_analyzer",
+		mcp.WithDescription("Decode and analyze a JWT (JSON Web Token): display header, payload claims, and signature; detect vulnerabilities such as the 'none' algorithm, missing expiration, and weak HMAC secrets."),
+		mcp.WithString("token",
+			mcp.Required(),
+			mcp.Description("The JWT token string to analyze (e.g. 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')"),
+		),
+	), jwtAnalyzerHandler)
+
 	s.AddTool(mcp.NewTool("subdomain_enum",
 		mcp.WithDescription("Enumerate subdomains for a domain using certificate transparency logs (crt.sh) or wordlist brute-forcing (gobuster/ffuf). Only use against domains you are authorized to test."),
 		mcp.WithString("domain",
@@ -107,6 +116,19 @@ func New() *server.MCPServer {
 	), subdomainEnumHandler)
 
 	return s
+}
+
+func jwtAnalyzerHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	token, ok := req.Params.Arguments["token"].(string)
+	if !ok || token == "" {
+		return mcp.NewToolResultError("token parameter is required"), nil
+	}
+
+	result, err := jwt_analyzer.Analyze(token)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("JWT analysis failed: %v", err)), nil
+	}
+	return mcp.NewToolResultText(result), nil
 }
 
 func sslInspectHandler(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
